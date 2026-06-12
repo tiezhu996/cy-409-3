@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -23,7 +24,11 @@ var infoCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("名称：%s\n来源：%s\n条款数：%d\n章节数：%d\n导入时间：%s\n", law.Name, law.SourceFile, law.ArticleCount, law.ChapterCount, law.ImportedAt.Format("2006-01-02 15:04:05"))
+		tagStr := "无"
+		if len(law.Tags) > 0 {
+			tagStr = strings.Join(law.Tags, ", ")
+		}
+		fmt.Printf("名称：%s\n来源：%s\n条款数：%d\n章节数：%d\n标签：%s\n导入时间：%s\n", law.Name, law.SourceFile, law.ArticleCount, law.ChapterCount, tagStr, law.ImportedAt.Format("2006-01-02 15:04:05"))
 		return nil
 	},
 }

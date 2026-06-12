@@ -17,7 +17,7 @@ var (
 	chapterRe = regexp.MustCompile(`^第[零一二三四五六七八九十百千万0-9]+[编章节].*`)
 )
 
-func ParseFile(file string, name string) (models.ImportBundle, error) {
+func ParseFile(file string, name string, tags []string) (models.ImportBundle, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return models.ImportBundle{}, err
@@ -26,7 +26,7 @@ func ParseFile(file string, name string) (models.ImportBundle, error) {
 
 	lawID := normalizeID(name)
 	bundle := models.ImportBundle{
-		Law: models.Law{ID: lawID, Name: name, SourceFile: file, ImportedAt: time.Now()},
+		Law: models.Law{ID: lawID, Name: name, SourceFile: file, ImportedAt: time.Now(), Tags: dedupeTags(tags)},
 	}
 	currentChapter := ""
 	var current *models.Article
@@ -136,4 +136,16 @@ func chineseNumberToInt(raw string) int {
 		}
 	}
 	return total + section + number
+}
+
+func dedupeTags(tags []string) []string {
+	set := make(map[string]bool)
+	var result []string
+	for _, tag := range tags {
+		if tag != "" && !set[tag] {
+			set[tag] = true
+			result = append(result, tag)
+		}
+	}
+	return result
 }

@@ -9,6 +9,7 @@ type Law struct {
 	ArticleCount int       `json:"article_count"`
 	ChapterCount int       `json:"chapter_count"`
 	ImportedAt   time.Time `json:"imported_at"`
+	Tags         []string  `json:"tags"`
 }
 
 type Section struct {

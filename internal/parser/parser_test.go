@@ -13,7 +13,7 @@ func TestParseFile(t *testing.T) {
 	if err := os.WriteFile(file, []byte(text), 0644); err != nil {
 		t.Fatal(err)
 	}
-	bundle, err := ParseFile(file, "民法典")
+	bundle, err := ParseFile(file, "民法典", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

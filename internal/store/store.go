@@ -158,6 +158,140 @@ func (s *Store) DeleteLaw(lawID string) error {
 	})
 }
 
+func (s *Store) UpdateLaw(law models.Law) error {
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		return putJSON(tx.Bucket(lawsBucket), law.ID, law)
+	})
+}
+
+func (s *Store) AddTags(lawID string, tags []string) error {
+	law, err := s.getLaw(lawID)
+	if err != nil {
+		return err
+	}
+	law.Tags = mergeUnique(law.Tags, tags)
+	return s.UpdateLaw(law)
+}
+
+func (s *Store) RemoveTags(lawID string, tags []string) error {
+	law, err := s.getLaw(lawID)
+	if err != nil {
+		return err
+	}
+	law.Tags = removeItems(law.Tags, tags)
+	return s.UpdateLaw(law)
+}
+
+func (s *Store) SetTags(lawID string, tags []string) error {
+	law, err := s.getLaw(lawID)
+	if err != nil {
+		return err
+	}
+	law.Tags = dedupe(tags)
+	return s.UpdateLaw(law)
+}
+
+func (s *Store) LawsByTags(tags []string) ([]models.Law, error) {
+	laws, err := s.Laws()
+	if err != nil {
+		return nil, err
+	}
+	if len(tags) == 0 {
+		return laws, nil
+	}
+	var result []models.Law
+	for _, law := range laws {
+		if hasAllTags(law.Tags, tags) {
+			result = append(result, law)
+		}
+	}
+	return result, nil
+}
+
+func (s *Store) AllTags() ([]string, error) {
+	laws, err := s.Laws()
+	if err != nil {
+		return nil, err
+	}
+	tagSet := make(map[string]bool)
+	for _, law := range laws {
+		for _, tag := range law.Tags {
+			tagSet[tag] = true
+		}
+	}
+	var tags []string
+	for tag := range tagSet {
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+func (s *Store) getLaw(lawID string) (models.Law, error) {
+	var law models.Law
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		raw := tx.Bucket(lawsBucket).Get([]byte(lawID))
+		if raw == nil {
+			return fmt.Errorf("未找到法规: %s", lawID)
+		}
+		return json.Unmarshal(raw, &law)
+	})
+	return law, err
+}
+
+func mergeUnique(existing, newTags []string) []string {
+	set := make(map[string]bool)
+	for _, tag := range existing {
+		set[tag] = true
+	}
+	for _, tag := range newTags {
+		set[tag] = true
+	}
+	var result []string
+	for tag := range set {
+		result = append(result, tag)
+	}
+	return result
+}
+
+func removeItems(items, toRemove []string) []string {
+	removeSet := make(map[string]bool)
+	for _, tag := range toRemove {
+		removeSet[tag] = true
+	}
+	var result []string
+	for _, tag := range items {
+		if !removeSet[tag] {
+			result = append(result, tag)
+		}
+	}
+	return result
+}
+
+func dedupe(tags []string) []string {
+	set := make(map[string]bool)
+	var result []string
+	for _, tag := range tags {
+		if !set[tag] {
+			set[tag] = true
+			result = append(result, tag)
+		}
+	}
+	return result
+}
+
+func hasAllTags(lawTags, requiredTags []string) bool {
+	tagSet := make(map[string]bool)
+	for _, tag := range lawTags {
+		tagSet[tag] = true
+	}
+	for _, required := range requiredTags {
+		if !tagSet[required] {
+			return false
+		}
+	}
+	return true
+}
+
 func putJSON(bucket *bbolt.Bucket, key string, value any) error {
 	payload, err := json.Marshal(value)
 	if err != nil {
