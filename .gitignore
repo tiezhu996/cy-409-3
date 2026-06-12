@@ -1,0 +1,8 @@
+lawsearch
+*.db
+.DS_Store
+*.log
+.idea/
+.vscode/
+dist/
+bin/
